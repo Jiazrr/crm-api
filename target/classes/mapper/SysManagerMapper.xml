@@ -21,8 +21,11 @@
         <if test="query.account != null and query.account != ''  ">
             and sm.account like concat('%',#{query.account},'%')
         </if>
-        <if test="query.type != null ">
-            and sm.type = #{query.type}
+        <if test="query.nickname != null and query.nickname != ''">
+            and sm.nickname LIKE CONCAT('%', #{query.nickname}, '%')
+        </if>
+        <if test="query.checkedDepartId != null ">
+        and sm.depart_id = #{query.checkedDepartId}
         </if>
         order by sm.create_time desc
     </select>

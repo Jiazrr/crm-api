@@ -1,7 +1,14 @@
 package com.crm.service;
 
+import com.crm.common.result.PageResult;
 import com.crm.entity.Customer;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.crm.query.CustomerQuery;
+import com.crm.vo.CustomerVO;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
+import java.util.List;
 
 /**
  * <p>
@@ -12,5 +19,29 @@ import com.baomidou.mybatisplus.extension.service.IService;
  * @since 2025-10-12
  */
 public interface CustomerService extends IService<Customer> {
+    /**
+     * 客户列表分页查询
+     * @param query
+     * @return
+     */
+    PageResult<CustomerVO> getPage(CustomerQuery query);
 
+    /**
+     * 导出客户列表
+     * @param query
+     * @param
+     */
+    void exportCustomer(CustomerQuery query, HttpServletResponse  HttpResponse);
+
+    /**
+     * 新增或编辑客户
+     * @param customerVO
+     */
+    void saveOrUpdate(CustomerVO customerVO);
+
+    /**
+     * 删除客户
+     * @param ids
+     */
+    void removeCustomer(List<Integer> ids);
 }
