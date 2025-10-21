@@ -5,7 +5,6 @@ import com.alibaba.excel.annotation.ExcelProperty;
 import com.alibaba.excel.annotation.write.style.ColumnWidth;
 import com.alibaba.excel.annotation.write.style.ContentRowHeight;
 import com.crm.converter.*;
-import com.crm.enums.CustomerLevelEnum;
 import com.crm.utils.DateUtils;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -93,4 +92,14 @@ public class CustomerVO {
     @Schema(description = "创建时间")
     @JsonFormat(pattern = DateUtils.DATE_TIME_PATTERN)
     private LocalDateTime createTime;
+
+    @Schema(description = "当前登录销售姓名（内存）")
+    private String currentOwnerName;
+
+    @Schema(description = "部门ID")
+    @ExcelProperty("部门ID")
+    private Integer departId;
+
+    @Schema(description = "部门名称")
+    private String deptName;
 }

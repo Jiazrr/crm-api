@@ -20,6 +20,7 @@ public class ManagerDetail implements UserDetails {
     private String realName;
     private Integer status;
     private String username;
+    private Integer departId;//新增：用户所属部门ID（关键字段）
 
     /**
      * 帐户是否过期

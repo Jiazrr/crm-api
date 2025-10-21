@@ -4,6 +4,8 @@ import com.crm.common.model.Query;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
+import java.util.List;
+
 @Data
 public class CustomerQuery extends Query {
     @Schema(description = "客户名称")
@@ -18,4 +20,5 @@ public class CustomerQuery extends Query {
     private Integer followStatus;
     @Schema(description = "0-客户列表，1-公海列表")
     private Integer isPublic;
+
 }

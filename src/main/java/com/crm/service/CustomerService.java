@@ -4,6 +4,7 @@ import com.crm.common.result.PageResult;
 import com.crm.entity.Customer;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.crm.query.CustomerQuery;
+import com.crm.query.IdQuery;
 import com.crm.vo.CustomerVO;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -44,4 +45,17 @@ public interface CustomerService extends IService<Customer> {
      * @param ids
      */
     void removeCustomer(List<Integer> ids);
+
+    /**
+     * 客户转入公海
+     * @param idQuery
+     * */
+    void customerToPublicPool(IdQuery idQuery);
+
+    /**
+     * 领取客户
+     * @param idQuery
+     */
+    void publicPoolToPrivate(IdQuery idQuery);
+
 }

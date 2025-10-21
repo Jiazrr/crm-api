@@ -11,6 +11,7 @@ import com.crm.mapper.SysManagerMapper;
 import com.crm.query.ChangePasswordQuery;
 import com.crm.query.SysManagerQuery;
 import com.crm.security.user.ManagerDetail;
+import com.crm.security.user.SecurityUser;
 import com.crm.service.SysManagerRoleService;
 import com.crm.service.SysManagerService;
 import com.crm.vo.SysManagerVO;
@@ -55,7 +56,6 @@ public class SysManagerServiceImpl extends ServiceImpl<SysManagerMapper, SysMana
         // 保存用户
         baseMapper.insert(entity);
         sysManagerRoleService.saveOrUpdate(entity.getId(), vo.getRoleId());
-
     }
 
     @Override
@@ -91,6 +91,11 @@ public class SysManagerServiceImpl extends ServiceImpl<SysManagerMapper, SysMana
         if (sysManager == null) {
             throw new ServerException("管理员不存在");
         }
+
+        // 直接设置 ManagerDetail 的部门ID和真实姓名（实时生效）
+        manage.setDepartId(sysManager.getDepartId()); // 部门ID
+        manage.setRealName(sysManager.getAccount()); // 真实姓名（也可改用 nickname/realName 字段）
+
         sysManagerVO.setId(sysManager.getId());
         sysManagerVO.setAccount(sysManager.getAccount());
         sysManagerVO.setStatus(sysManager.getStatus());

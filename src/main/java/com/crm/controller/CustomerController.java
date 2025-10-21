@@ -5,6 +5,7 @@ import com.crm.common.exception.ServerException;
 import com.crm.common.result.PageResult;
 import com.crm.common.result.Result;
 import com.crm.query.CustomerQuery;
+import com.crm.query.IdQuery;
 import com.crm.service.CustomerService;
 import com.crm.vo.CustomerVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -41,7 +42,7 @@ public class CustomerController {
     }
 
     @PostMapping("export")
-    @Operation(summary = "客户列表-导出")
+    @Operation(summary = "导出客户信息")
     public void exportCustomer(@RequestBody CustomerQuery query, HttpServletResponse response){
         customerService.exportCustomer(query, response);
     }
@@ -60,6 +61,20 @@ public class CustomerController {
             throw new ServerException("请选择要删除的客户信息");
         }
         customerService.removeCustomer(ids);
+        return Result.ok();
+    }
+
+    @PostMapping("toPublic")
+    @Operation(summary="转为公海客户")
+    public Result customerToPublicPool(@RequestBody @Validated IdQuery idQuery){
+        customerService.customerToPublicPool(idQuery);
+        return Result.ok();
+    }
+
+    @PostMapping("toPrivate")
+    @Operation(summary="领取客户")
+    public Result publicPoolToPrivate(@RequestBody @Validated IdQuery idQuery){
+        customerService.publicPoolToPrivate(idQuery);
         return Result.ok();
     }
 
