@@ -20,7 +20,6 @@ import com.crm.vo.CustomerVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
