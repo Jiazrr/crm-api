@@ -1,7 +1,9 @@
 package com.crm.controller;
 
+import com.crm.common.aop.Log;
 import com.crm.common.result.Result;
 import com.crm.entity.SysMenu;
+import com.crm.enums.BusinessType;
 import com.crm.enums.MenuTypeEnum;
 import com.crm.query.SysMenuQuery;
 import com.crm.security.user.ManagerDetail;
@@ -39,6 +41,7 @@ public class SysMenuController {
 
     @PostMapping("nav")
     @Operation(summary = "用户菜单")
+    @Log(title = "菜单管理-获取用户菜单", businessType = BusinessType.SELECT)
     public Result<List<SysMenuVO>> nav() {
         ManagerDetail manager = SecurityUser.getManager();
         return Result.ok(sysMenuService.getManagerMenuList(manager, MenuTypeEnum.BUTTON.name()));
@@ -46,6 +49,7 @@ public class SysMenuController {
 
     @PostMapping("button")
     @Operation(summary = "用户按钮权限")
+    @Log(title = "菜单管理-获取用户按钮权限", businessType = BusinessType.SELECT)
     public Result<Set<String>> authority() {
         ManagerDetail manager = SecurityUser.getManager();
         return Result.ok(sysMenuService.getManagerAuthority(manager));
@@ -54,6 +58,7 @@ public class SysMenuController {
     @PostMapping("list")
     @Operation(summary = "菜单列表")
     @Parameter(name = "type", description = "菜单类型 0：菜单 1：按钮  null：全部")
+    @Log(title = "菜单管理-查询菜单列表", businessType = BusinessType.SELECT)
     public Result<List<SysMenuVO>> list(@RequestBody SysMenuQuery query) {
         List<SysMenuVO> list = sysMenuService.getMenuList(query);
         return Result.ok(list);
@@ -61,12 +66,14 @@ public class SysMenuController {
 
     @PostMapping("info")
     @Operation(summary = "信息")
+    @Log(title = "菜单管理-查询菜单详情", businessType = BusinessType.SELECT)
     public Result<SysMenuVO> get(@RequestBody IdVO vo) {
         return Result.ok(sysMenuService.infoById(vo.getId()));
     }
 
     @PostMapping("add")
     @Operation(summary = "保存")
+    @Log(title = "菜单管理-新增菜单", businessType = BusinessType.INSERT_OR_UPDATE)
     public Result<String> save(@RequestBody @Valid SysMenuVO vo) {
         sysMenuService.save(vo);
         return Result.ok();
@@ -74,6 +81,7 @@ public class SysMenuController {
 
     @PostMapping("edit")
     @Operation(summary = "修改")
+    @Log(title = "菜单管理-修改菜单", businessType = BusinessType.INSERT_OR_UPDATE)
     public Result<String> update(@RequestBody @Valid SysMenuVO vo) {
         sysMenuService.update(vo);
         return Result.ok();
@@ -81,6 +89,7 @@ public class SysMenuController {
 
     @PostMapping("remove")
     @Operation(summary = "删除")
+    @Log(title = "菜单管理-删除菜单", businessType = BusinessType.DELETE)
     public Result<String> delete(@RequestBody IdVO vo) {
         sysMenuService.delete(vo.getId());
         return Result.ok();
@@ -88,6 +97,7 @@ public class SysMenuController {
 
     @PostMapping("form")
     @Operation(summary = "表单菜单列表")
+    @Log(title = "菜单管理-查询表单菜单列表", businessType = BusinessType.SELECT)
     public Result<List<SysMenu>> getFormMenuList() {
         List<SysMenu> list = sysMenuService.getFormMenuList();
         return Result.ok(list);

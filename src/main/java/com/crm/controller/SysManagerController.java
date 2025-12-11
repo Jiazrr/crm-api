@@ -1,9 +1,11 @@
 package com.crm.controller;
 
 import cn.hutool.core.util.StrUtil;
+import com.crm.common.aop.Log;
 import com.crm.common.exception.ServerException;
 import com.crm.common.result.PageResult;
 import com.crm.common.result.Result;
+import com.crm.enums.BusinessType;
 import com.crm.query.ChangePasswordQuery;
 import com.crm.query.SysManagerQuery;
 import com.crm.security.user.ManagerDetail;
@@ -42,6 +44,7 @@ public class SysManagerController {
 
     @PostMapping("page")
     @Operation(summary = "分页")
+    @Log(title = "管理员管理-分页查询", businessType = BusinessType.SELECT)
     public Result<PageResult<SysManagerVO>> page(@RequestBody @Valid SysManagerQuery query) {
         PageResult<SysManagerVO> page = sysManagerService.page(query);
 
@@ -50,6 +53,7 @@ public class SysManagerController {
 
     @PostMapping("add")
     @Operation(summary = "保存")
+    @Log(title = "管理员管理-新增管理员", businessType = BusinessType.INSERT_OR_UPDATE)
     public Result<String> save(@RequestBody @Valid SysManagerVO vo) {
         // 新增密码不能为空
         if (StrUtil.isBlank(vo.getPassword())) {
@@ -65,6 +69,7 @@ public class SysManagerController {
 
     @PostMapping("edit")
     @Operation(summary = "修改")
+    @Log(title = "管理员管理-修改管理员", businessType = BusinessType.INSERT_OR_UPDATE)
     public Result<String> update(@RequestBody @Valid SysManagerVO vo) {
         // 如果密码不为空，则进行加密处理
         if (StrUtil.isBlank(vo.getPassword())) {
@@ -80,6 +85,7 @@ public class SysManagerController {
 
     @PostMapping("remove")
     @Operation(summary = "删除")
+    @Log(title = "管理员管理-删除管理员", businessType = BusinessType.DELETE)
     public Result<String> delete(@RequestBody List<Integer> idList) {
         Integer managerId = SecurityUser.getManagerId();
         if (idList.contains(managerId)) {
@@ -93,6 +99,7 @@ public class SysManagerController {
 
     @PostMapping("getManagerInfo")
     @Operation(summary = "获取管理员信息")
+    @Log(title = "管理员管理-获取当前管理员信息", businessType = BusinessType.SELECT)
     public Result<SysManagerVO> getManagerInfo() {
         ManagerDetail manager = SecurityUser.getManager();
         return Result.ok(sysManagerService.getManagerInfo(manager));
@@ -100,6 +107,7 @@ public class SysManagerController {
 
     @PostMapping("changePassword")
     @Operation(summary = "修改密码")
+    @Log(title = "管理员管理-修改密码", businessType = BusinessType.OTHER)
     public Result<String> editPassword(@RequestBody @Valid ChangePasswordQuery query) {
         ManagerDetail manager = SecurityUser.getManager();
         if (manager.getId() == null) {

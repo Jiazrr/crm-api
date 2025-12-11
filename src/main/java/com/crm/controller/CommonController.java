@@ -1,6 +1,8 @@
 package com.crm.controller;
 
+import com.crm.common.aop.Log;
 import com.crm.common.result.Result;
+import com.crm.enums.BusinessType;
 import com.crm.service.CommonService;
 import com.crm.vo.FileUrlVO;
 import io.swagger.v3.oas.annotations.Operation;
@@ -23,6 +25,7 @@ public class CommonController {
 
     @PostMapping("/upload/file")
     @Operation(summary = "文件上传")
+    @Log(title = "通用模块-文件上传", businessType = BusinessType.OTHER)
     public Result<FileUrlVO> uploadFile(@RequestBody MultipartFile file) {
         return Result.ok(commonService.upload(file));
     }

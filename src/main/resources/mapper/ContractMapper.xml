@@ -22,5 +22,4 @@
         <result column="start_time" property="startTime" />
         <result column="end_time" property="endTime" />
     </resultMap>
-
 </mapper>
