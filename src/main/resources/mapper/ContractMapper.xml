@@ -22,4 +22,116 @@
         <result column="start_time" property="startTime" />
         <result column="end_time" property="endTime" />
     </resultMap>
+
+    <!-- 合同通用统计（按小时） -->
+    <select id="getTradeStatistics" resultType="com.crm.vo.ContractTrendVO">
+        SELECT
+        ANY_VALUE (count(*)) AS tradeCount,
+        ANY_VALUE (DATE_FORMAT(create_time, '%H:%i')) AS tradeTime
+        FROM
+        t_contract
+        WHERE
+        delete_flag = 0
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null ">
+            AND create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+        </if>
+        GROUP BY
+        tradeTime;
+    </select>
+
+    <!-- 合同按日/月统计 -->
+    <select id="getTradeStatisticsByDay" resultType="com.crm.vo.ContractTrendVO">
+        SELECT
+        ANY_VALUE (count(*)) AS tradeCount,
+        DATE_FORMAT(create_time, ${query.timeFormat}) AS tradeTime
+        FROM
+        t_contract
+        WHERE
+        delete_flag = 0
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null ">
+            AND create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+        </if>
+        GROUP BY
+        tradeTime;
+    </select>
+
+    <!-- 合同按周统计 -->
+    <select id="getTradeStatisticsByWeek" resultType="com.crm.vo.ContractTrendVO">
+        SELECT
+        ANY_VALUE (count(*)) AS tradeCount,
+        FLOOR((DATEDIFF(create_time, DATE_FORMAT(create_time, '%Y-01-01')) +
+        WEEKDAY(DATE_FORMAT(create_time, '%Y-01-01')) + 1) / 7) + 1 AS tradeTime
+        FROM
+        t_contract
+        WHERE
+        delete_flag = 0
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null ">
+            AND create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+            AND create_time >= #{query.timeRange[0]}
+        </if>
+        GROUP BY
+        tradeTime;
+    </select>
+
+    <!-- ========== 饼图统计 SQL（修复特殊字符转义） ========== -->
+    <!-- 按合同状态统计 -->
+    <select id="getContractPieByStatus" resultType="com.crm.vo.PieDataVO">
+        <![CDATA[
+        SELECT
+        CASE status
+        WHEN 0 THEN '初始化'
+        WHEN 1 THEN '审核通过'
+        WHEN 2 THEN '审核未通过'
+        END AS name,
+        COUNT(id) AS value
+        FROM t_contract
+        WHERE delete_flag = 0
+        ]]>
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null">
+            AND create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+        </if>
+        GROUP BY status;
+    </select>
+
+    <select id="getContractPieByAmount" resultType="com.crm.vo.PieDataVO">
+        <![CDATA[
+    SELECT
+        t.name AS name,
+        COUNT(t.id) AS value
+    FROM (
+        SELECT
+            id,
+            CASE
+                WHEN amount < 1000 THEN '1000元以下'
+                WHEN amount BETWEEN 1000 AND 10000 THEN '1000-10000元'
+                WHEN amount BETWEEN 10001 AND 50000 THEN '10001-50000元'
+                ELSE '50000元以上'
+            END AS name
+        FROM t_contract
+        WHERE delete_flag = 0
+    ]]>
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null">
+            AND create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+        </if>
+        <![CDATA[
+    ) t
+    GROUP BY t.name;
+    ]]>
+    </select>
+
+    <!-- 按归属客户统计 -->
+    <select id="getContractPieByCustomer" resultType="com.crm.vo.PieDataVO">
+        <![CDATA[
+        SELECT
+        c.name AS name,
+        COUNT(tc.id) AS value
+        FROM t_contract tc
+        LEFT JOIN t_customer c ON tc.customer_id = c.id
+        WHERE tc.delete_flag = 0
+        ]]>
+        <if test="query.timeRange[0]!= null and query.timeRange[1]!= null">
+            AND tc.create_time BETWEEN #{query.timeRange[0]} AND #{query.timeRange[1]}
+        </if>
+        GROUP BY tc.customer_id, c.name;
+    </select>
 </mapper>

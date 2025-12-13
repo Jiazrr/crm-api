@@ -11,6 +11,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+import com.crm.enums.ContractStatusEnum;
 import io.swagger.annotations.ApiModel;
 import io.swagger.annotations.ApiModelProperty;
 import lombok.Getter;
@@ -118,5 +119,7 @@ public class Contract {
             this.endTime = LocalDateTime.of(endTime, LocalTime.MIN);
         }
     }
-
+    public String getStatusDesc() {
+        return ContractStatusEnum.getByCode(this.status).getDesc();
+    }
 }

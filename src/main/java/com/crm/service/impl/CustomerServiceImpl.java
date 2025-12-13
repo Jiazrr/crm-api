@@ -11,26 +11,35 @@ import com.crm.entity.Department;
 import com.crm.entity.SysManager;
 import com.crm.mapper.CustomerMapper;
 import com.crm.query.CustomerQuery;
+import com.crm.query.CustomerTrendQuery;
 import com.crm.query.IdQuery;
 import com.crm.security.user.SecurityUser;
 import com.crm.service.CustomerService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.crm.utils.DateUtils;
 import com.crm.utils.ExcelUtils;
+import com.crm.vo.CustomerTrendVO;
 import com.crm.vo.CustomerVO;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+
+import static com.crm.utils.DateUtils.*;
 
 /**
  * <p>
  *  服务实现类
  * </p>
  *
- * @author crm
- * @since 2025-10-12
  */
 @Service
 @Slf4j
@@ -157,4 +166,65 @@ public class CustomerServiceImpl extends ServiceImpl<CustomerMapper, Customer> i
         wrapper.orderByDesc(Customer::getCreateTime);
         return wrapper;
     }
+
+    @Override
+    public Map<String, List> getCustomerTrendData(CustomerTrendQuery query
+    ) {
+// 处理不同请求类型的时间
+// x轴时间数据
+        List<String> timeList = new ArrayList<>();
+// 统计客户变化数据
+        List<Integer> countList = new ArrayList<>();
+        List<CustomerTrendVO> tradeStatistics;
+        if ("day".equals(query.getTransactionType())) {
+            LocalDateTime now = LocalDateTime.now();
+            // 截断毫秒和纳秒部分 影响sql 查询结果
+            LocalDateTime truncatedNow = now.truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime startTime = now.withHour(0).withMinute(0).withSecond(0).truncatedTo(ChronoUnit.SECONDS);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            List<String> timeRange = new ArrayList<>();
+            timeRange.add(formatter.format(startTime));
+            timeRange.add(formatter.format(truncatedNow));
+            timeList = getHourData(timeRange);
+            query.setTimeRange(timeRange);
+            tradeStatistics = baseMapper.getTradeStatistics(query);
+        } else if ("monthrange".equals(query.getTransactionType())) {
+            query.setTimeFormat("'%Y-%m'");
+            timeList = getMonthInRange(query.getTimeRange().get(0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByDay(query);
+        } else if ("week".equals(query.getTransactionType())) {
+            timeList = getWeekInRange(query.getTimeRange().get(0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByWeek(query);
+        } else {
+            query.setTimeFormat("'%Y-%m-%d'");
+            timeList = DateUtils.getDatesInRange(query.getTimeRange().get(
+                    0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByDay(query);
+        }
+// 匹配时间点查询到的数据，没有值的默认为0
+        List<CustomerTrendVO> finalTradeStatistics = tradeStatistics;
+        timeList.forEach(item -> {
+            CustomerTrendVO statisticsVO = finalTradeStatistics.stream()
+                    .filter(vo -> {
+                        if ("day".equals(query.getTransactionType())) {
+                            // ⽐较⼩时段
+                            return item.substring(0, 2).equals(vo.getTradeTime().substring(0, 2));
+                        } else {
+                            return item.equals(vo.getTradeTime());
+                        }
+                    })
+                    .findFirst()
+                    .orElse(null); // 找不到则为 null
+            if (statisticsVO != null) {
+                countList.add(statisticsVO.getTradeCount());
+            } else {
+                countList.add(0);
+            }
+        });
+        Map<String, List> result = new HashMap<>();
+        result.put("timeList", timeList);
+        result.put("countList", countList);
+        return result;
+    }
+
 }

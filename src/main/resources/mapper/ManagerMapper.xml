@@ -13,6 +13,7 @@
         <result column="create_time" property="createTime" />
         <result column="update_time" property="updateTime" />
         <result column="depart_id" property="departId" />
+        <result column="email" property="email" />
     </resultMap>
 
 </mapper>

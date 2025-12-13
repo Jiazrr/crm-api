@@ -5,29 +5,33 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.crm.common.exception.ServerException;
 import com.crm.common.result.PageResult;
 import com.crm.convert.ContractConvert;
-import com.crm.entity.Contract;
-import com.crm.entity.ContractProduct;
-import com.crm.entity.Customer;
-import com.crm.entity.Product;
-import com.crm.mapper.ContractMapper;
-import com.crm.mapper.ContractProductMapper;
-import com.crm.mapper.ProductMapper;
-import com.crm.query.ContractQuery;
+import com.crm.entity.*;
+import com.crm.mapper.*;
+import com.crm.query.*;
 import com.crm.security.user.SecurityUser;
 import com.crm.service.ContractService;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.crm.vo.ContractVO;
-import com.crm.vo.ProductVO;
+import com.crm.utils.DateUtils;
+import com.crm.utils.EmailUtils;
+import com.crm.vo.*;
 import com.github.yulichang.wrapper.MPJLambdaWrapper;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 
+import static com.crm.utils.DateUtils.*;
 import static com.crm.utils.NumberUtils.generateContractNumber;
 
 /**
@@ -35,14 +39,16 @@ import static com.crm.utils.NumberUtils.generateContractNumber;
  *  服务实现类
  * </p>
  *
- * @author crm
- * @since 2025-10-12
  */
 @Service
 @AllArgsConstructor
+@Slf4j
 public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> implements ContractService {
     private final ContractProductMapper contractProductMapper;
     private final ProductMapper ProductMapper;
+    private final ApprovalMapper approvalMapper;
+    private final ManagerMapper managerMapper;
+    private final EmailUtils emailUtils;
     @Override
     public PageResult<ContractVO> getPage(ContractQuery query) {
         Page<ContractVO> page = new Page(query.getPage(),query.getLimit());
@@ -218,5 +224,144 @@ public class ContractServiceImpl extends ServiceImpl<ContractMapper, Contract> i
         product.setStock(product.getStock() - count);
         product.setSales(product.getSales() + count);
         ProductMapper.updateById(product);
+    }
+
+    @Override
+    public Map<String, List> getContractTrendData(ContractTrendQuery query) {
+        // x轴时间数据
+        List<String> timeList = new ArrayList<>();
+        // 统计合同数量数据
+        List<Integer> countList = new ArrayList<>();
+        List<ContractTrendVO> tradeStatistics;
+
+        if ("day".equals(query.getTransactionType())) {
+            LocalDateTime now = LocalDateTime.now();
+            // 截断毫秒和纳秒部分
+            LocalDateTime truncatedNow = now.truncatedTo(ChronoUnit.SECONDS);
+            LocalDateTime startTime = now.withHour(0).withMinute(0).withSecond(0).truncatedTo(ChronoUnit.SECONDS);
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+            List<String> timeRange = new ArrayList<>();
+            timeRange.add(formatter.format(startTime));
+            timeRange.add(formatter.format(truncatedNow));
+            timeList = getHourData(timeRange);
+            query.setTimeRange(timeRange);
+            tradeStatistics = baseMapper.getTradeStatistics(query);
+        } else if ("monthrange".equals(query.getTransactionType())) {
+            query.setTimeFormat("'%Y-%m'");
+            timeList = getMonthInRange(query.getTimeRange().get(0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByDay(query);
+        } else if ("week".equals(query.getTransactionType())) {
+            timeList = getWeekInRange(query.getTimeRange().get(0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByWeek(query);
+        } else {
+            query.setTimeFormat("'%Y-%m-%d'");
+            timeList = DateUtils.getDatesInRange(query.getTimeRange().get(0), query.getTimeRange().get(1));
+            tradeStatistics = baseMapper.getTradeStatisticsByDay(query);
+        }
+
+        // 匹配时间点数据，无数据则补0
+        List<ContractTrendVO> finalTradeStatistics = tradeStatistics;
+        timeList.forEach(item -> {
+            ContractTrendVO statisticsVO = finalTradeStatistics.stream()
+                    .filter(vo -> {
+                        if ("day".equals(query.getTransactionType())) {
+                            // 比较小时段
+                            return item.substring(0, 2).equals(vo.getTradeTime().substring(0, 2));
+                        } else {
+                            return item.equals(vo.getTradeTime());
+                        }
+                    })
+                    .findFirst()
+                    .orElse(null);
+            if (statisticsVO != null) {
+                countList.add(statisticsVO.getTradeCount());
+            } else {
+                countList.add(0);
+            }
+        });
+
+        Map<String, List> result = new HashMap<>();
+        result.put("timeList", timeList);
+        result.put("countList", countList);
+        return result;
+    }
+
+    @Override
+    public List<PieDataVO> getContractPieData(ContractTrendQuery query) {
+        switch (query.getDimension()) {
+            case "status":
+                return baseMapper.getContractPieByStatus(query);
+            case "amount":
+                return baseMapper.getContractPieByAmount(query);
+            case "customer":
+                return baseMapper.getContractPieByCustomer(query);
+            default:
+                return new ArrayList<>();
+        }
+    }
+
+    @Override
+    public void startApproval(IdQuery idQuery) {
+        Contract contract = baseMapper.selectById(idQuery.getId());
+        if (contract == null) {
+            throw new ServerException("合同不存在");
+        }
+        if (contract.getStatus() != 0) {
+            throw new ServerException("该合同已审核通过，请勿重复提交");
+        }
+        contract.setStatus(1);
+        baseMapper.updateById(contract);
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public void approvalContract(ApprovalQuery query) {
+// 根据id 查询合同信息
+        Contract contract = baseMapper.selectById(query.getId());
+        if (contract == null) {
+            throw new ServerException("合同不存在");
+        }
+        if (contract.getStatus() != 1) {
+            throw new ServerException("该合同已审核通过，请勿重复提交");
+        }
+// 审核内容
+        String approvalContent = query.getComment(); // 直接取自定义意见
+        //String approvalContent = query.getType() == 0 ? "审核通过" : "审核拒绝";
+// 合同列表审核状态
+        Integer contractStatus = query.getType() == 0 ? 2 : 3;
+        contract.setStatus(contractStatus);
+// 审核记录
+        Approval approval = new Approval();
+        approval.setType(0);
+        approval.setStatus(query.getType());
+        approval.setCreaterId(SecurityUser.getManagerId());
+        approval.setContractId(query.getId());
+        approval.setDeleteFlag(0);
+        approval.setComment(approvalContent);
+        baseMapper.updateById(contract);
+        approvalMapper.insert(approval);
+
+        try {
+            // 获取合同创建人信息
+            Manager creator = managerMapper.selectById(contract.getCreaterId());
+            if (creator == null || StringUtils.isBlank(creator.getEmail())) {
+                log.warn("合同创建人邮箱不存在");
+                return;
+            }
+
+            // 发送邮件
+            String toEmail = creator.getEmail();
+            String contractName = contract.getName();
+            String contractNumber = contract.getNumber();
+
+            if (query.getType() == 0) {
+                emailUtils.sendContractApprovedEmail(toEmail, contractName, approvalContent, contractNumber);
+            } else {
+                emailUtils.sendContractRejectedEmail(toEmail, contractName, approvalContent, contractNumber);
+            }
+        } catch (Exception e) {
+            log.error("发送审核邮件失败");
+
+        }
     }
 }
